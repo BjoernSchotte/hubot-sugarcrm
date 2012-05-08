@@ -55,9 +55,13 @@ module.exports = (robot) ->
         #msg.send ""
         #msg.send "Now iterating through result list:"
         for entry in data_result.entry_list
+          id = entry.id
+          msg.send "EntryID = " + id
+          sugarCRMGetEntry msg, url, session, module, id, (entry_result) ->
+            msg.send "Record: " + JSON.stringify entry_result
         #  msg.send "ID: " + entry.id
-          for key,value of entry
-            msg.send key + " = " + value
+        #  for key,value of entry
+        #    msg.send key + " = " + value
         #  msg.send entry.first_name + " " + entry.last_name + " at " + entry.account_name + ". Phone: " + entry.phone_work
 
 sugarCRMLogin = (msg, url, user_name, password, callback) ->
@@ -80,13 +84,21 @@ sugarCRMSearchRecord = (msg, url, session, module, field, searchfor, callback) -
     session: session,
     module_name: module,
     query: d_query,
-    order_by: d_order_by,
-    select_fields: ["first_name", "last_name"]
+    order_by: d_order_by
   }
   sugarCRMCall msg, url, 'get_entry_list', data, (err, res, body) ->
     json    = JSON.parse(body)
     callback(json)
 
+sugarCRMGetEntry = (msg, url, session, module, id, callback) ->
+  data = {
+    session: session,
+    module_name: module,
+    id: id
+  }
+  sugarCRMCall msg, url, 'get_entry', data, (err, res, body) ->
+    json  = JSON.parse(body)
+    callback(json)
 
 sugarCRMCall = (msg, url, method, data, callback) ->
   msg.http(url + '/service/v2/rest.php')
