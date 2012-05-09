@@ -14,6 +14,8 @@ module.exports = (robot) ->
   username     = process.env.HUBOT_SUGARCRM_USERNAME
   password     = process.env.HUBOT_SUGARCRM_PASSWORD
 
+  lead_fields  = ["first_name", "last_name", "phone_work", "account_name"]
+
   unless url
     msg.send "SugarCRM URL isn't set."
     msg.send "Please set the HUBOT_SUGARCRM_URL environment variable without prefixed HTTP or trailing slash"
@@ -50,15 +52,16 @@ module.exports = (robot) ->
     msg.send "Searching in " + module + " where " + field + " like '%" + query + "%'"
     sugarCRMLogin msg, url, username, password, (session) ->
       sugarCRMSearchRecord msg, url, session, module, field, query, (data_result) ->
-        #for key,value of data_result
-        #  msg.send key + " - " + value
-        #msg.send ""
-        #msg.send "Now iterating through result list:"
         for entry in data_result.entry_list
           id = entry.id
-          msg.send "EntryID = " + id
-          sugarCRMGetEntry msg, url, session, module, id, (entry_result) ->
-            msg.send "Record: " + JSON.stringify entry_result
+          sugarCRMGetEntry msg, url, session, module, id, lead_fields, (entry_result) ->
+            record = entry_result.entry_list[0]
+            record_fields = record.name_value_list
+            first_name = record_fields.first_name.value
+            last_name = record_fields.last_name.value
+            phone_work = record_fields.phone_work.value
+            account_name = record_fields.account_name.value
+            msg.send first_name + " " + last_name + " " + phone_work + " [" + account_name + "]"
         #  msg.send "ID: " + entry.id
         #  for key,value of entry
         #    msg.send key + " = " + value
@@ -84,17 +87,18 @@ sugarCRMSearchRecord = (msg, url, session, module, field, searchfor, callback) -
     session: session,
     module_name: module,
     query: d_query,
-    order_by: d_order_by
+    order_by: d_order_by,
   }
   sugarCRMCall msg, url, 'get_entry_list', data, (err, res, body) ->
     json    = JSON.parse(body)
     callback(json)
 
-sugarCRMGetEntry = (msg, url, session, module, id, callback) ->
+sugarCRMGetEntry = (msg, url, session, module, id, fields, callback) ->
   data = {
     session: session,
     module_name: module,
-    id: id
+    id: id,
+    select_fields: fields
   }
   sugarCRMCall msg, url, 'get_entry', data, (err, res, body) ->
     json  = JSON.parse(body)
