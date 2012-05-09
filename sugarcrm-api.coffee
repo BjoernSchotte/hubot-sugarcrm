@@ -55,6 +55,8 @@ module.exports = (robot) ->
         for entry in data_result.entry_list
           id = entry.id
           sugarCRMGetEntry msg, url, session, module, id, lead_fields, (entry_result) ->
+            # currently only works for module Leads
+            # TODO: make field names dependant on queried module
             record = entry_result.entry_list[0]
             record_fields = record.name_value_list
             first_name = record_fields.first_name.value
