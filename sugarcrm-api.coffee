@@ -47,11 +47,11 @@ module.exports = (robot) ->
         # for key,value of json
         #   msg.send key + " - " + value
 
-  robot.respond /crmfind (.+) for (.+) is (.+)/i, (msg) ->
-    [module, field, query] = msg.match[1..3]
-    msg.send "Searching in " + module + " where " + field + " like '%" + query + "%'"
+  robot.respond /find (.+) for (.+) (is|like) (.+)/i, (msg) ->
+    [module, field, operator, query] = msg.match[1..4]
+    # msg.send "Searching in " + module + " where " + field + " " + operator + " '%" + query + "%'"
     sugarCRMLogin msg, url, username, password, (session) ->
-      sugarCRMSearchRecord msg, url, session, module, field, query, (data_result) ->
+      sugarCRMSearchRecord msg, url, session, module, field, operator, query, (data_result) ->
         for entry in data_result.entry_list
           id = entry.id
           sugarCRMGetEntry msg, url, session, module, id, lead_fields, (entry_result) ->
@@ -80,8 +80,15 @@ sugarCRMLogin = (msg, url, user_name, password, callback) ->
     sessionID = JSON.parse(body).id
     callback(sessionID)
 
-sugarCRMSearchRecord = (msg, url, session, module, field, searchfor, callback) ->
-  d_query = field + " LIKE '%" + searchfor + "%'"
+sugarCRMSearchRecord = (msg, url, session, module, field, operator, searchfor, callback) ->
+  if operator == "is"
+    # we need to attach module here
+    # i.e. Leads.first_name in order to avoid ambigoous field name errors in the SQL query
+    d_query = module.toLowerCase() + "." + field + "= '" + searchfor + "'"
+  else if operator == "like"
+    d_query = module.toLowerCase() + "." + field + " LIKE '%" + searchfor + "%'"
+
+  # msg.send module + " Query = " + d_query
   d_order_by = field # for future enhancement
   data = {
     session: session,
@@ -90,6 +97,10 @@ sugarCRMSearchRecord = (msg, url, session, module, field, searchfor, callback) -
     order_by: d_order_by,
   }
   sugarCRMCall msg, url, 'get_entry_list', data, (err, res, body) ->
+    # debugging
+    # msg.send "err: " + err
+    # msg.send "res: " + res
+    # msg.send "body: " + JSON.stringify body
     json    = JSON.parse(body)
     callback(json)
 
